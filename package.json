@@ -1,0 +1,31 @@
+{
+  "name": "codon",
+  "version": "1.0.0",
+  "description": "A service for knowledge graph in JavaScript",
+  "main": "server/index.js",
+  "scripts": {
+    "test": "echo 'No Test'",
+    "dev.serve": "FLAME_DEBUG=1 node ./server/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stallpool/codon.git"
+  },
+  "keywords": [
+    "repository",
+    "source code",
+    "search engine",
+    "flame"
+  ],
+  "author": "Seven Lju",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/stallpool/condon/issues"
+  },
+  "homepage": "https://github.com/stallpool/codon#readme",
+  "dependencies": {
+    "ldapjs": "^1.0.2",
+    "uuid": "^3.3.2",
+    "ws": "^6.1.2"
+  }
+}
