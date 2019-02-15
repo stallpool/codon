@@ -191,21 +191,23 @@ const Storage = {
          return dir;
       }
    },
-   remove_directory: (dir) => {
-      if (dir.length < Storage.work_dir.length) {
+   remove_directory: (dir, work_dir) => {
+      if (work_dir) {
+         if (dir.length < work_dir.length) {
+            return false;
+         }
+         if (dir.indexOf(work_dir) !== 0) {
+            return false;
+         }
+      }
+      if (!i_fs.existsSync(dir)) {
          return false;
       }
-      if (dir.indexOf(Storage.work_dir) !== 0) {
-         return false;
-      }
-      if (!fs.existsSync(dir)) {
-         return false;
-      }
-      fs.readdirSync(dir).forEach(function(file, index){
+      i_fs.readdirSync(dir).forEach(function(file, index){
          var curPath = i_path.join(dir, file);
          if (i_fs.lstatSync(curPath).isDirectory()) {
             // recurse
-            Storage.rmtree(curPath);
+            Storage.remove_directory(curPath, work_dir);
          } else { // delete file
             i_fs.unlinkSync(curPath);
          }
