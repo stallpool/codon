@@ -362,7 +362,7 @@ class FileSystemGraph {
                id: []
             };
          }
-         unique_push(index_item.id, node_id);
+         unique_push(index_item.id, link_id);
          this.cache.save(filename, index_item);
          r();
       });

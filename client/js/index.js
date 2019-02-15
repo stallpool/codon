@@ -1,29 +1,37 @@
 'use strict';
 //@include common.js
+//@include component/canvas.js
 
 var ui = {
    loading: dom('#p_loading'),
-   app: {
-      self: dom('#p_app')
-   }
+   app: dom('#p_app')
 };
 
 function before_app() {
    ui_loading();
 }
 
+function resize() {
+}
+
+function register_events() {
+   window.addEventListener('resize', resize);
+}
+
 function init_app() {
    ui_loaded();
+   register_events();
+   resize();
 }
 
 function ui_loading() {
-   ui.app.self.classList.add('hide');
+   ui.app.classList.add('hide');
    ui.loading.classList.remove('hide');
 }
 
 function ui_loaded() {
    ui.loading.classList.add('hide');
-   ui.app.self.classList.remove('hide');
+   ui.app.classList.remove('hide');
 }
 
 var env = {};

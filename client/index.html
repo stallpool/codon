@@ -7,12 +7,15 @@
    <link rel="stylesheet" href="css/clr-ui.min.css">
    <link rel="stylesheet" href="css/common.css">
    <style>
+      body {
+         overflow: hidden;
+      }
    </style>
 </head>
 <body>
    <header class="header header-5">
       <div class="branding">
-         <img class="header-icon" src="icon.png" />&nbsp;
+         <img class="header-icon" src="icon_w.png" />&nbsp;
          <span class="title">Codon</span>
       </div>
    </header>
@@ -29,12 +32,12 @@
          </ul>
       </div>
       <div id="p_mline" class="content-container">
-         <div class="content-area form-block">
-         Codon: Knowledge Graph Service
+         <div id="canvas" class="content-area form-block">
          </div>
       </div>
    </div>
    <script src="js/common.js"></script>
+   <script src="js/component/canvas.js"></script>
    <script src="js/index.js"></script>
 </body>
 </html>
