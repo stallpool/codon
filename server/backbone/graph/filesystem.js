@@ -2,6 +2,7 @@ const i_fs = require('fs');
 const i_path = require('path');
 const i_uuid = require('uuid');
 const i_storage = require('../../utils').Storage;
+const i_codec = require('../../utils').Codec;
 
 class Cache {
    constructor(capcity) {
@@ -99,6 +100,19 @@ function link_id_to_nodes_dirname(base_dir, link_id) {
    return link_id_to_filename(base_dir, link_id) + 'nodes';
 }
 
+function query_to_index_filename(base_dir, query, prefix) {
+   return id2filename(
+      i_path.join(base_dir, prefix),
+      i_codec.base64.encode(query)
+   );
+}
+
+function unique_push(list, x) {
+   if (!list) return;
+   if (list.indexOf(x) >= 0) return;
+   list.push(x);
+}
+
 function touch(filename, data) {
    let dir_name = i_path.dirname(filename);
    if (!i_fs.existsSync(dir_name)) i_storage.make_directory(dir_name);
@@ -122,12 +136,42 @@ class FileSystemGraph {
       };
    }
 
+   get_nodes(node_ids) {
+      return new Promise((r, e) => {
+         r(node_ids.map((node_id) => {
+            let filename = node_id_to_filename(this.config.node_dir, node_id);
+            let data = this.cache.load(filename);
+            if (data) data = JSON.parse(data);
+            return data;
+         }).filter((x) => !!x));
+      });
+   }
+
+   get_links(link_ids) {
+      return new Promise((r, e) => {
+         r(link_ids.map((link_id) => {
+            let filename = link_id_to_filename(this.config.node_dir, link_id);
+            let data = this.cache.load(filename);
+            if (data) data = JSON.parse(data);
+            return data;
+         }).filter((x) => !!x));
+      });
+   }
+
    get_node(node_id) {
       return new Promise((r, e) => {
          let filename = node_id_to_filename(this.config.node_dir, node_id);
          let data = this.cache.load(filename);
          if (data) data = JSON.parse(data);
          r(data);
+      });
+   }
+
+   get_node_link(node_id) {
+      return new Promise((r, e) => {
+         let dir_name = node_id_to_links_dirname(this.config.node_dir, node_id);
+         let link_ids = i_storage.list_files(dir_name).map((x) => x.split('/').pop());
+         r(link_ids);
       });
    }
 
@@ -270,11 +314,107 @@ class FileSystemGraph {
       });
    }
 
+   index_node(query, node_id) {
+      return new Promise((r, e) => {
+         let filename = query_to_index_filename(
+            this.config.index_dir, query, '_node'
+         );
+         let index_item = this.cache.load(filename);
+         if (index_item) {
+            index_item = JSON.parse(index_item);
+         } else {
+            index_item = {
+               id: []
+            };
+         }
+         unique_push(index_item.id, node_id);
+         this.cache.save(filename, index_item);
+         r();
+      });
+   }
+
+   remove_index_node(query, node_id) {
+      return new Promise((r, e) => {
+         let filename = query_to_index_filename(
+            this.config.index_dir, query, '_node'
+         );
+         let index_item = this.cache.load(filename);
+         if (!index_item) {
+            return e([query, node_id]);
+         }
+         let i = index_item.id.indexOf(node_id);
+         if (i < 0) return e([node_id]);
+         index_item.id.splice(i, 1);
+         this.cache.save(filename, index_item);
+      });
+   }
+
+   index_link(query, link_id) {
+      return new Promise((r, e) => {
+         let filename = query_to_index_filename(
+            this.config.index_dir, query, '_link'
+         );
+         let index_item = this.cache.load(filename);
+         if (index_item) {
+            index_item = JSON.parse(index_item);
+         } else {
+            index_item = {
+               id: []
+            };
+         }
+         unique_push(index_item.id, node_id);
+         this.cache.save(filename, index_item);
+         r();
+      });
+   }
+
+   remove_index_link(query, link_id) {
+      return new Promise((r, e) => {
+         let filename = query_to_index_filename(
+            this.config.index_dir, query, '_link'
+         );
+         let index_item = this.cache.load(filename);
+         if (!index_item) {
+            return e([query, link_id]);
+         }
+         let i = index_item.id.indexOf(link_id);
+         if (i < 0) return e([link_id]);
+         index_item.id.splice(i, 1);
+         this.cache.save(filename, index_item);
+      });
+   }
+
    search(query) {
-      return new Promise((r, e) => r({
-         node: [],
-         link: [],
-      }));
+      return new Promise((r, e) => {
+         let filename, index_item;
+         let link_items = [], node_items = [];
+         filename = query_to_index_filename(
+            this.config.index_dir, query, '_node'
+         );
+         index_item = this.cache.load(filename);
+         if (index_item && index_item.id && index_item.id.lenght) {
+            node_items = index_item.id.map((x) => {
+               return JSON.parse(this.cache.load(
+                  node_id_to_filename(x)
+               ));
+            });
+         }
+         filename = query_to_index_filename(
+            this.config.index_dir, query, '_link'
+         );
+         index_item = this.cache.load(filename);
+         if (index_item && index_item.id && index_item.id.lenght) {
+            link_items = index_item.id.map((x) => {
+               return JSON.parse(this.cache.load(
+                  link_id_to_filename(x)
+               ));
+            });
+         }
+         r({
+            node: node_items,
+            link: link_items,
+         });
+      });
    }
 };
 
