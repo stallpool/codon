@@ -7,7 +7,13 @@
     * |--- Text
     */
 
+   function measureText(pen, text) {
+      return pen.measureText(text);
+   }
+
    function CodonEditor(dom, options) {
+      this.options = options || {};
+      this._useDefaultOptions();
       this.ref_dom = dom;
       this.dom = document.createElement('canvas');
       this.ref_dom.appendChild(this.dom);
@@ -19,9 +25,6 @@
       this.editor_linemark = new CodonEditorLineMark(this, this.editor_linemark_theme);
       this._size = null;
       this.layout(); // this.size = { width, height, font }
-
-      this.options = options || {};
-      this._useDefaultOptions();
    }
    CodonEditor.prototype = {
       memorize: function (data) {
@@ -45,8 +48,7 @@
          this.dom.width = this._size.width;
          this.dom.height = this._size.height;
          this._adjustFontSize();
-         this.editor_linemark.layout();
-         this.editor_text.layout();
+         this._adjustLineMarkAndTextWindow();
          this.restore();
       },
       paint: function () {
@@ -62,6 +64,22 @@
       },
       _useDefaultOptions: function () {
          if (this.options.showLineNumbers === undefined) this.options.showLineNumbers = true;
+      },
+      _adjustLineMarkAndTextWindow: function () {
+         var linemark_w = 0;
+         if (this.options.showLineNumbers) {
+            linemark_w = this.editor_linemark.getLabelWidth() + 10 + 25;
+         }
+         this.editor_linemark.size({
+            x: 0, width: linemark_w,
+            y: 0, height: this._size.height
+         });
+         this.editor_text.size({
+            x: linemark_w, width: this._size.width - linemark_w,
+            y: 0, height: this._size.height
+         });
+         this.editor_linemark.layout();
+         this.editor_text.layout();
       },
       _adjustFontSize: function () {
          this.pen.font = this._size.font + 'px monospace';
@@ -97,8 +115,8 @@
       this.layout();
    }
    CodonEditorLineMark.prototype = {
-      visualize: function (vis_objects) {
-         vis_objects = {
+      debug: function () {
+         this._visobj = {
             lines: [
                { value: '  1', theme: 'selected' },
                { value: ' 10' },
@@ -106,19 +124,37 @@
                { value: '999' }
             ]
          };
-         this._visobj = vis_objects;
+      },
+      visualize: function () {
+         if (!this._size || !this._size.width) return;
          var x = this._size.x || 10;
          var y = this._size.y || 0;
          var line_height = (this._size.font || 16) + 4;
          var _this = this;
          this.theme.setDefault('#4466ff');
-         vis_objects.lines.forEach(function (line, i) {
+         this._visobj && this._visobj.lines.forEach(function (line, i) {
             _this.editor.pen.fillStyle = _this.theme.get(line.theme);
             _this.editor.pen.fillText(line.value, x, y+(i+1)*line_height);
          });
       },
       layout: function () {
          this._size = Object.assign(this._size, this.editor.size());
+      },
+      getLabelWidth: function (quick) {
+         if (quick) return this._last_max_w || 0;
+         var w = 0, _this = this;
+         this._visobj && this._visobj.lines.forEach(function (line) {
+            var rect = measureText(_this.editor.pen, line.value || '');
+            if (rect.width > w) w = rect.width;
+         });
+         this._last_max_w = w;
+         return w;
+      },
+      size: function (update) {
+         if (update) {
+            this._size = Object.assign(this._size, update);
+         }
+         return Object.assign({}, this._size);
       },
       dispose: function () {
          this.editor = null;
@@ -136,8 +172,8 @@
       this.layout();
    }
    CodonEditorText.prototype = {
-      visualize: function(vis_objects) {
-         vis_objects = {
+      debug: function () {
+         this._visobj = {
             lines: [
                { value: 'Hello World\n' },
                { value: 'abcdefghijklmnopqrstuvwxyz✪\n' },
@@ -145,19 +181,26 @@
                { value: '~!@#$%^&*()_+{}|:"<>?\n' }
             ]
          };
-         this._visobj = vis_objects;
+      },
+      visualize: function() {
          var x = this._size.x || 60;
          var y = this._size.y || 0;
          var line_height = (this._size.font || 16) + 4;
          var _this = this;
          this.theme.setDefault('black');
-         vis_objects.lines.forEach(function (line, i) {
+         this._visobj && this._visobj.lines.forEach(function (line, i) {
             _this.editor.pen.fillStyle = _this.theme.get(line.theme);
             _this.editor.pen.fillText(line.value, x, y+(i+1)*line_height);
          });
       },
       layout: function () {
          this._size = Object.assign(this._size, this.editor.size());
+      },
+      size: function (update) {
+         if (update) {
+            this._size = Object.assign(this._size, update);
+         }
+         return Object.assign({}, this._size);
       },
       dispose: function () {
          this.editor = null;
