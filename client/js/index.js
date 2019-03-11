@@ -4,7 +4,8 @@
 
 var ui = {
    loading: dom('#p_loading'),
-   app: dom('#p_app')
+   app: dom('#p_app'),
+   editor: new window.CodonEditor(dom('#canvas'))
 };
 
 function before_app() {
@@ -12,6 +13,8 @@ function before_app() {
 }
 
 function resize() {
+   ui.editor.memorize();
+   ui.editor.layout();
 }
 
 function register_events() {
@@ -32,6 +35,12 @@ function ui_loading() {
 function ui_loaded() {
    ui.loading.classList.add('hide');
    ui.app.classList.remove('hide');
+
+   let container = ui.editor.dom.parentNode;
+   container.style.width = '100%';
+   container.style.height = (window.innerHeight - container.offsetTop) + 'px';
+   ui.editor.layout();
+   ui.editor.paint();
 }
 
 var env = {};
