@@ -15,6 +15,7 @@ function before_app() {
 function resize() {
    ui.editor.memorize();
    ui.editor.layout();
+   ui.editor.paint();
 }
 
 function register_events() {
@@ -39,8 +40,8 @@ function ui_loaded() {
    let container = ui.editor.dom.parentNode;
    container.style.width = '100%';
    container.style.height = (window.innerHeight - container.offsetTop) + 'px';
-   ui.editor.editor_linemark.debug();
    ui.editor.editor_text.debug();
+   ui.editor.editor_linemark.debug(ui.editor.editor_text);
    ui.editor.layout();
    ui.editor.paint();
 }
