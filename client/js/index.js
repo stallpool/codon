@@ -1,6 +1,6 @@
 'use strict';
 //@include common.js
-//@include component/canvas.js
+//@include component/editor.js
 
 var ui = {
    loading: dom('#p_loading'),
@@ -37,7 +37,7 @@ function ui_loaded() {
    ui.loading.classList.add('hide');
    ui.app.classList.remove('hide');
 
-   let container = ui.editor.dom.parentNode;
+   var container = ui.editor.dom.parentNode;
    container.style.width = '100%';
    container.style.height = (window.innerHeight - container.offsetTop) + 'px';
    ui.editor.editor_text.debug();

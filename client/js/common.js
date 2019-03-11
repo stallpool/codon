@@ -9,8 +9,7 @@ function dom(selector) {
 }
 
 function ajax(options, done_fn, fail_fn) {
-   var xhr = new XMLHttpRequest(),
-      payload = null;
+   var xhr = new XMLHttpRequest(), payload = null;
    xhr.open(options.method || 'POST', options.url + (options.data ? uriencode(options.data) : ''), true);
    xhr.addEventListener('readystatechange', function (evt) {
       if (evt.target.readyState === 4 /*XMLHttpRequest.DONE*/) {
@@ -29,8 +28,7 @@ function ajax(options, done_fn, fail_fn) {
 }
 
 function html(url, done_fn, fail_fn) {
-   var xhr = new XMLHttpRequest(),
-      payload = null;
+   var xhr = new XMLHttpRequest();
    xhr.open('GET', url, true);
    xhr.addEventListener('readystatechange', function (evt) {
       if (evt.target.readyState === 4 /*XMLHttpRequest.DONE*/) {
@@ -115,4 +113,19 @@ function login_and_start(env, before_init, init_app, redirect_url) {
    }, function () {
       window.location = redirect_url;
    });
+}
+
+if (!Object.assign) {
+   Object.assign = function () {
+      var a = arguments[0];
+      if (!a) return a;
+      for (var i = 1, n = arguments.length; i < n; i++) {
+         var x = arguments[i];
+         if (!x) continue;
+         for (var key in x) {
+            a[key] = x[key];
+         }
+      }
+      return a;
+   };
 }

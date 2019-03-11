@@ -1,3 +1,5 @@
+//@include mobile.js
+
 (function (window, document) {
    'use strict';
 
@@ -101,6 +103,33 @@
             _this.editor_text.pan(dx, dy);
             _this.editor_linemark.syncPan(0, _this.editor_text.view().y);
          });
+
+         var mobile_env = { x: null, y: null, selecting: false };
+         var mobiletouch = window.PetalMobileInteraction({
+            touchpinch: function (target, pos) {},
+            touchmove: function (target, pos) {
+               if (mobile_env.selecting) {
+               } else {
+                  var last_x = mobile_env.x;
+                  var last_y = mobile_env.y;
+                  var x = pos.clientX, y = pos.clientY;
+                  if (x === last_x && y === last_y) return;
+                  if (last_x !== null && last_y !== null) {
+                     var dx = x - last_x, dy = y - last_y;
+                     _this.editor_text.pan(-dx, -dy);
+                     _this.editor_linemark.syncPan(0, _this.editor_text.view().y);
+                  }
+                  mobile_env.x = x;
+                  mobile_env.y = y;
+               }
+            },
+            touchend: function (target, pos) {
+               mobile_env.x = null;
+               mobile_env.y = null;
+            }
+         });
+         mobiletouch.config().pinch.enable = true;
+         mobiletouch.bind(this.dom);
       }
    };
 
