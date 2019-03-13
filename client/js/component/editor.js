@@ -3,6 +3,10 @@
 (function (window, document) {
    'use strict';
 
+   var system = {
+      defaultFontSize: 16
+   };
+
    /**
     * + Codon Editor
     * |--- LineNumber / OffsetNumber
@@ -50,7 +54,7 @@
          this._size = {
             width: this.ref_dom.offsetWidth || 1,
             height: this.ref_dom.offsetHeight || 1,
-            font: 16
+            font: system.defaultFontSize
          };
          this.dom.style.width = this._size.width + 'px';
          this.dom.style.height = this._size.height + 'px';
@@ -181,12 +185,15 @@
             };
          }
       },
+      _panPaint: 0,
       syncPan: function (_, viewY) {
          if (viewY < 0) viewY = 0;
          this._size.viewTop = viewY;
          var _this = this;
-         requestAnimationFrame(function () {
+         if (this._panPaint) cancelAnimationFrame(this._panPaint);
+         this._panPaint = requestAnimationFrame(function () {
             _this.visualize();
+            _this._panPaint = 0;
          });
       },
       visualize: function () {
@@ -195,7 +202,7 @@
          var y = this._size.y || 0;
          var w = this._size.width || 1;
          var h = this._size.height || 1;
-         var line_height = (this._size.font || 16) + 4;
+         var line_height = (this._size.font || system.defaultFontSize) + 4;
          var viewY = this._size.viewTop || 0;
 
          var _this = this;
@@ -284,14 +291,9 @@
          this.__last_max_w = 0;
          this.getLineWidth();
       },
-      _pan: [],
+      _panPaint: 0,
       pan: function (dx, dy) {
-         if (dx && dy) this._pan.push([dx, dy]);
-         var nextpan = this._pan.pop();
-         if (!nextpan) return;
-         dx = nextpan[0];
-         dy = nextpan[1];
-         var line_height = (this._size.font || 16) + 4;
+         var line_height = (this._size.font || system.defaultFontSize) + 4;
          var viewX = (this._size.viewLeft || 0) + dx;
          var viewY = (this._size.viewTop || 0) + dy;
          if (viewX < 0) viewX = 0;
@@ -308,14 +310,15 @@
          this._size.viewLeft = viewX;
          this._size.viewTop = viewY;
          var _this = this;
-         requestAnimationFrame(function () {
+         if (this._panPaint) cancelAnimationFrame(this._panPaint);
+         this._panPaint = requestAnimationFrame(function () {
             _this.visualize();
-            if (_this._pan.length) _this.pan();
+            _this._panPaint = 0;
          });
       },
       _visualizeVerticalScroll: function(x, y, w, h, top) {
          if (!this._visobj) return;
-         var line_height = (this._size.font || 16) + 4;
+         var line_height = (this._size.font || system.defaultFontSize) + 4;
          var bottom = (this._visobj.lines.length+1)*line_height;
          if (h >= bottom + line_height) {
             this.scrollbar.vertical = null;
@@ -380,7 +383,7 @@
          var y = this._size.y || 0;
          var w = this._size.width || 1;
          var h = this._size.height || 1;
-         var line_height = (this._size.font || 16) + 4;
+         var line_height = (this._size.font || system.defaultFontSize) + 4;
          var viewX = this._size.viewLeft || 0;
          var viewY = this._size.viewTop || 0;
 
