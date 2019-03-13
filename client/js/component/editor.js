@@ -219,7 +219,8 @@
          this.editor.pen.restore();
       },
       layout: function () {
-         this._size = Object.assign(this._size, this.editor.size());
+         var size =  this.editor.size();
+         this._size.height = size.height;
          this._size.width = this.getLineWidth(true);
       },
       getLineWidth: function (quick) {
@@ -256,6 +257,10 @@
       this._visobj = null;
       this._size = {};
       this.layout();
+      this.scrollbar = {
+         vertical: null,
+         horizontal: null
+      };
    }
    CodonEditorText.prototype = {
       debug: function () {
@@ -284,8 +289,8 @@
          this._size.viewRight = this.getLineWidth(true);
          this._size.viewBottom = this._visobj?this._visobj.lines.length:0;
          this._size.viewBottom *= line_height;
-         var viewMaxX = this._size.viewRight - this._size.width + this._size.x + 10;
-         var viewMaxY = this._size.viewBottom - this._size.height + this._size.y + line_height;
+         var viewMaxX = this._size.viewRight - this._size.width + 15;
+         var viewMaxY = this._size.viewBottom - this._size.height + line_height;
          if (viewMaxX < 0 ) viewMaxX = 0;
          if (viewMaxY < 0) viewMaxY = 0;
          if (viewX > viewMaxX) viewX = viewMaxX;
@@ -296,6 +301,68 @@
          requestAnimationFrame(function () {
             _this.visualize();
          });
+      },
+      _visualizeVerticalScroll: function(x, y, w, h, top) {
+         if (!this._visobj) return;
+         var line_height = (this._size.font || 16) + 4;
+         var bottom = (this._visobj.lines.length+1)*line_height;
+         if (h >= bottom + line_height) {
+            this.scrollbar.vertical = null;
+            return;
+         }
+         var scrollbar = {};
+         this.scrollbar.vertical = scrollbar;
+         scrollbar.x = x + w - 10;
+         scrollbar.y = y;
+         scrollbar.w = 10;
+         scrollbar.h = h;
+         scrollbar.sh = h * h / bottom;
+         if (scrollbar.sh < 2) scrollbar.sh = 2;
+         scrollbar.sy = y + (h - scrollbar.sh) / (bottom - h) * top;
+
+         this.editor.pen.beginPath();
+         this.editor.pen.rect(scrollbar.x, scrollbar.y, scrollbar.w, scrollbar.h);
+         this.editor.pen.fillStyle =  scrollbar.barFillStyle || 'rgba(200, 200, 200, 0.5)';
+         this.editor.pen.fill();
+         this.editor.pen.strokeStyle = scrollbar.barStrokeStyle || 'rgb(225, 225, 225)';
+         this.editor.pen.stroke();
+
+         this.editor.pen.beginPath();
+         this.editor.pen.rect(scrollbar.x, scrollbar.sy, scrollbar.w, scrollbar.sh);
+         this.editor.pen.fillStyle = scrollbar.slideFillStyle || 'rgb(150, 150, 150, 0.5)';
+         this.editor.pen.fill();
+         this.editor.pen.strokeStyle = scrollbar.slideStrokeStyle || 'rgb(100, 100, 100)';
+         this.editor.pen.stroke();
+      },
+      _visualizeHorizontalScroll: function (x, y, w, h, left) {
+         var right = this.getLineWidth();
+         if (w >= right + 10) {
+            this.scrollbar.horizontal = null;
+            return;
+         }
+         var scrollbar = {};
+         this.scrollbar.horizontal = scrollbar;
+         scrollbar.x = x;
+         scrollbar.y = y + h - 10;
+         scrollbar.w = w;
+         scrollbar.h = 10;
+         scrollbar.sw = w * w / right;
+         if (scrollbar.sw < 2) scrollbar.sw = 2;
+         scrollbar.sx = x + (w - scrollbar.sw) / (right - w) * left ;
+
+         this.editor.pen.beginPath();
+         this.editor.pen.rect(scrollbar.x, scrollbar.y, scrollbar.w, scrollbar.h);
+         this.editor.pen.fillStyle = 'rgba(200, 200, 200, 0.5)';
+         this.editor.pen.fill();
+         this.editor.pen.strokeStyle = 'rgb(225, 225, 225)';
+         this.editor.pen.stroke();
+
+         this.editor.pen.beginPath();
+         this.editor.pen.rect(scrollbar.sx, scrollbar.y, scrollbar.sw, scrollbar.h);
+         this.editor.pen.fillStyle = 'rgb(150, 150, 150, 0.5)';
+         this.editor.pen.fill();
+         this.editor.pen.strokeStyle = 'rgb(100, 100, 100)';
+         this.editor.pen.stroke();
       },
       visualize: function() {
          var x = this._size.x || 0;
@@ -336,10 +403,13 @@
                _this.editor.pen.fillText(line.value, x - viewX, offsetY+(i+1)*line_height);
             }
          });
+         this._visualizeVerticalScroll(x-1, y+1, w, h-15, viewY);
+         this._visualizeHorizontalScroll(x+1, y-1, w-15, h, viewX);
          this.editor.pen.restore();
       },
       layout: function () {
-         this._size = Object.assign(this._size, this.editor.size());
+         var size = this.editor.size();
+         this._size.height = size.height;
       },
       getLineWidth: function (quick) {
          if (quick && this.__last_max_w) return this.__last_max_w || 0;
