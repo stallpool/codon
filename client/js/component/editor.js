@@ -207,7 +207,7 @@
          region.rect(x, y, w, h);
          this.editor.pen.clip(region);
 
-         var alignX = this.getLineWidth(true);
+         var alignX = this.getLineWidth();
          var visible_line_st_index = Math.floor(viewY / line_height);
          var visible_line_ed_index = visible_line_st_index + Math.ceil(h / line_height) + 1;
          var visible_lines = this._visobj.lines.slice(visible_line_st_index, visible_line_ed_index);
@@ -221,10 +221,10 @@
       layout: function () {
          var size =  this.editor.size();
          this._size.height = size.height;
-         this._size.width = this.getLineWidth(true);
+         this._size.width = this.getLineWidth();
       },
-      getLineWidth: function (quick) {
-         if (quick && this.__last_max_w) return this.__last_max_w || 0;
+      getLineWidth: function () {
+         if (this.__last_max_w) return this.__last_max_w || 0;
          var w = 0, _this = this;
          this._visobj && this._visobj.lines.forEach(function (line) {
             var rect = measureText(_this.editor.pen, line.value || ' ');
@@ -276,17 +276,27 @@
                { value: 'This stentence is very long: ' + generateRandomString(100) }
             ]
          };
-         for(var i = 0; i < 100; i++) this._visobj.lines.push({value: generateRandomString(~~(Math.random()*10)+10)});
+         for(var i = 0; i < 100; i++) this._visobj.lines.push({
+            value: generateRandomString(~~(Math.random()*10)+10)
+         });
          this.theme.set('woo', 'green');
+         // Notice: when change _visobj.lines, need to clear __last_max_w
+         this.__last_max_w = 0;
+         this.getLineWidth();
       },
+      _pan: [],
       pan: function (dx, dy) {
-         if (!dx || !dy) return;
+         if (dx && dy) this._pan.push([dx, dy]);
+         var nextpan = this._pan.pop();
+         if (!nextpan) return;
+         dx = nextpan[0];
+         dy = nextpan[1];
          var line_height = (this._size.font || 16) + 4;
          var viewX = (this._size.viewLeft || 0) + dx;
          var viewY = (this._size.viewTop || 0) + dy;
          if (viewX < 0) viewX = 0;
          if (viewY < 0) viewY = 0;
-         this._size.viewRight = this.getLineWidth(true);
+         this._size.viewRight = this.getLineWidth();
          this._size.viewBottom = this._visobj?this._visobj.lines.length:0;
          this._size.viewBottom *= line_height;
          var viewMaxX = this._size.viewRight - this._size.width + 15;
@@ -300,6 +310,7 @@
          var _this = this;
          requestAnimationFrame(function () {
             _this.visualize();
+            if (_this._pan.length) _this.pan();
          });
       },
       _visualizeVerticalScroll: function(x, y, w, h, top) {
@@ -384,10 +395,12 @@
 
          var visible_line_st_index = Math.floor(viewY / line_height);
          var visible_line_ed_index = visible_line_st_index + Math.ceil(h / line_height) + 1;
-         var visible_lines = this._visobj.lines.slice(visible_line_st_index, visible_line_ed_index);
+         // var visible_lines = this._visobj.lines.slice(visible_line_st_index, visible_line_ed_index);
          var offsetY = this._size.y + visible_line_st_index * line_height - viewY;
-         visible_lines.forEach(function (line, i) {
+         for (var j = visible_line_st_index, i = 0; j < visible_line_ed_index; j++, i++) {
             var last_x = 0;
+            var line = this._visobj.lines[j];
+            if (!line) continue;
             if (Array.isArray(line.value)) {
                line.value.forEach(function (span) {
                   var line_w = span.width || measureText(_this.editor.pen, span.value).width;
@@ -402,7 +415,7 @@
                _this.editor.pen.fillStyle = _this.theme.get(line.theme);
                _this.editor.pen.fillText(line.value, x - viewX, offsetY+(i+1)*line_height);
             }
-         });
+         }
          this._visualizeVerticalScroll(x-1, y+1, w, h-15, viewY);
          this._visualizeHorizontalScroll(x+1, y-1, w-15, h, viewX);
          this.editor.pen.restore();
@@ -411,8 +424,8 @@
          var size = this.editor.size();
          this._size.height = size.height;
       },
-      getLineWidth: function (quick) {
-         if (quick && this.__last_max_w) return this.__last_max_w || 0;
+      getLineWidth: function () {
+         if (this.__last_max_w) return this.__last_max_w || 0;
          var w = 0, _this = this;
          this._visobj && this._visobj.lines.forEach(function (line) {
             var __line_max_w = 0;
