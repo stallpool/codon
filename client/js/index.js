@@ -13,6 +13,10 @@ function before_app() {
 }
 
 function resize() {
+   var container = ui.editor.dom.parentNode;
+   container.style.width = '100%';
+   container.style.height = (window.innerHeight - container.offsetTop) + 'px';
+
    ui.editor.memorize();
    ui.editor.layout();
    ui.editor.paint();

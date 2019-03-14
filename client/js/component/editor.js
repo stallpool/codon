@@ -4,7 +4,27 @@
    'use strict';
 
    var system = {
-      defaultFontSize: 16
+      defaultFontSize: 16,
+      defaultTextColor: 'black',
+      defaultLineNumberColor: '#4466ff',
+      defaultScrollBarColor: 'rgba(200, 200, 200, 0.5)',
+      defaultScrollBarBorderColor: 'rgb(225, 225, 225)',
+      defaultScrollSlideColor: 'rgb(150, 150, 150, 0.5)',
+      defaultScrollSlideBorderColor: 'rgb(100, 100, 100)',
+   };
+   var math = {
+      xRectRect: function (x1, y1, w1, h1, x2, y2, w2, h2) {
+         if (x1 > x2 + w2) return false;
+         if (x2 > x1 + w1) return false;
+         if (y1 > y2 + h2) return false;
+         if (y2 > y1 + h1) return false;
+         return true;
+      },
+      xPointRect: function (x0, y0, x, y, w, h) {
+         if (x0 < x || x0 > x + w) return false;
+         if (y0 < y || y0 > y + h) return false;
+         return true;
+      }
    };
 
    /**
@@ -75,8 +95,38 @@
          }
          return Object.assign({}, this._size);
       },
+      getObjectAt: function (x, y) {
+         var linemark_size = this.editor_linemark.size();
+         var text_size = this.editor_text.size();
+         if (math.xPointRect(
+            x, y,
+            linemark_size.x,
+            linemark_size.y,
+            linemark_size.width,
+            linemark_size.height
+         )) {
+            return this.editor_linemark.getObjectAt(
+               x - linemark_size.x,
+               y - linemark_size.y
+            );
+         } else if (math.xPointRect(
+            x, y,
+            text_size.x,
+            text_size.y,
+            text_size.width,
+            text_size.height
+         )) {
+            return this.editor_text.getObjectAt(
+               x - text_size.x,
+               y - text_size.y
+            );
+         }
+         return null;
+      },
       _useDefaultOptions: function () {
-         if (this.options.showLineNumbers === undefined) this.options.showLineNumbers = true;
+         if (this.options.showLineNumbers === undefined) {
+            this.options.showLineNumbers = true;
+         }
       },
       _adjustLineMarkAndTextWindow: function () {
          var linemark_w = 0;
@@ -104,8 +154,7 @@
             evt.preventDefault();
             var dx = evt.deltaX;
             var dy = evt.deltaY;
-            _this.editor_text.pan(dx, dy);
-            _this.editor_linemark.syncPan(0, _this.editor_text.view().y);
+            pan(dx, dy);
          });
 
          var mobile_env = { x: null, y: null, selecting: false };
@@ -120,8 +169,7 @@
                   if (x === last_x && y === last_y) return;
                   if (last_x !== null && last_y !== null) {
                      var dx = x - last_x, dy = y - last_y;
-                     _this.editor_text.pan(-dx, -dy);
-                     _this.editor_linemark.syncPan(0, _this.editor_text.view().y);
+                     pan(-dx, -dy);
                   }
                   mobile_env.x = x;
                   mobile_env.y = y;
@@ -134,12 +182,20 @@
          });
          mobiletouch.config().pinch.enable = true;
          mobiletouch.bind(this.dom);
+
+         var interaction = PetalInteraction({});
+         interaction.bind(this.dom);
+
+         function pan(dx, dy) {
+            _this.editor_text.pan(dx, dy);
+            _this.editor_linemark.syncPan(0, _this.editor_text.view().y);
+         }
       }
    };
 
    function CodonTheme(_default) {
       this._map = {};
-      this._default = _default || 'black';
+      this._default = _default || system.defaultTextColor;
    }
    CodonTheme.prototype = {
       has: function (tag) {
@@ -164,6 +220,7 @@
       this._size = {};
       this._options = {};
       this.layout();
+      this._panPaintLock = 0;
    }
    CodonEditorLineMark.prototype = {
       debug: function (editor_text) {
@@ -185,15 +242,14 @@
             };
          }
       },
-      _panPaint: 0,
       syncPan: function (_, viewY) {
          if (viewY < 0) viewY = 0;
          this._size.viewTop = viewY;
          var _this = this;
-         if (this._panPaint) cancelAnimationFrame(this._panPaint);
-         this._panPaint = requestAnimationFrame(function () {
+         if (this._panPaintLock) cancelAnimationFrame(this._panPaintLock);
+         this._panPaintLock = requestAnimationFrame(function () {
             _this.visualize();
-            _this._panPaint = 0;
+            _this._panPaintLock = 0;
          });
       },
       visualize: function () {
@@ -207,7 +263,7 @@
 
          var _this = this;
          this.editor.pen.clearRect(x-1, y, w+1, h);
-         this.theme.setDefault('#4466ff');
+         this.theme.setDefault(system.defaultLineNumberColor);
          if (!this._visobj) return;
          this.editor.pen.save();
          var region = new window.Path2D();
@@ -250,6 +306,9 @@
       view: function () {
          return { x: this._size.viewLeft || 0, y: this._size.viewTop || 0 };
       },
+      getObjectAt: function (x, y) {
+         return null;
+      },
       dispose: function () {
          this.editor = null;
          this.theme = null;
@@ -268,6 +327,7 @@
          vertical: null,
          horizontal: null
       };
+      this._panPaintLock = 0;
    }
    CodonEditorText.prototype = {
       debug: function () {
@@ -291,7 +351,6 @@
          this.__last_max_w = 0;
          this.getLineWidth();
       },
-      _panPaint: 0,
       pan: function (dx, dy) {
          var line_height = (this._size.font || system.defaultFontSize) + 4;
          var viewX = (this._size.viewLeft || 0) + dx;
@@ -310,11 +369,26 @@
          this._size.viewLeft = viewX;
          this._size.viewTop = viewY;
          var _this = this;
-         if (this._panPaint) cancelAnimationFrame(this._panPaint);
-         this._panPaint = requestAnimationFrame(function () {
+         if (this._panPaintLock) cancelAnimationFrame(this._panPaintLock);
+         this._panPaintLock = requestAnimationFrame(function () {
             _this.visualize();
-            _this._panPaint = 0;
+            _this._panPaintLock = 0;
          });
+      },
+      _paintScrollBar: function(scrollbar) {
+         this.editor.pen.beginPath();
+         this.editor.pen.rect(scrollbar.x, scrollbar.y, scrollbar.w, scrollbar.h);
+         this.editor.pen.fillStyle =  scrollbar.barFillStyle || system.defaultScrollBarColor;
+         this.editor.pen.fill();
+         this.editor.pen.strokeStyle = scrollbar.barStrokeStyle || system.defaultScrollBarBorderColor;
+         this.editor.pen.stroke();
+
+         this.editor.pen.beginPath();
+         this.editor.pen.rect(scrollbar.sx, scrollbar.sy, scrollbar.sw, scrollbar.sh);
+         this.editor.pen.fillStyle = scrollbar.slideFillStyle || system.defaultScrollSlideColor;
+         this.editor.pen.fill();
+         this.editor.pen.strokeStyle = scrollbar.slideStrokeStyle || system.defaultScrollSlideBorderColor;
+         this.editor.pen.stroke();
       },
       _visualizeVerticalScroll: function(x, y, w, h, top) {
          if (!this._visobj) return;
@@ -324,29 +398,21 @@
             this.scrollbar.vertical = null;
             return;
          }
-         var scrollbar = {};
-         this.scrollbar.vertical = scrollbar;
+         var scrollbar = this.scrollbar.vertical;
+         if (!scrollbar) {
+            scrollbar = {};
+            this.scrollbar.vertical = scrollbar;
+         }
          scrollbar.x = x + w - 10;
+         scrollbar.sx = scrollbar.x;
          scrollbar.y = y;
          scrollbar.w = 10;
+         scrollbar.sw = scrollbar.w;
          scrollbar.h = h;
          scrollbar.sh = h * h / bottom;
          if (scrollbar.sh < 2) scrollbar.sh = 2;
-         scrollbar.sy = y + (h - scrollbar.sh) / (bottom - h) * top;
-
-         this.editor.pen.beginPath();
-         this.editor.pen.rect(scrollbar.x, scrollbar.y, scrollbar.w, scrollbar.h);
-         this.editor.pen.fillStyle =  scrollbar.barFillStyle || 'rgba(200, 200, 200, 0.5)';
-         this.editor.pen.fill();
-         this.editor.pen.strokeStyle = scrollbar.barStrokeStyle || 'rgb(225, 225, 225)';
-         this.editor.pen.stroke();
-
-         this.editor.pen.beginPath();
-         this.editor.pen.rect(scrollbar.x, scrollbar.sy, scrollbar.w, scrollbar.sh);
-         this.editor.pen.fillStyle = scrollbar.slideFillStyle || 'rgb(150, 150, 150, 0.5)';
-         this.editor.pen.fill();
-         this.editor.pen.strokeStyle = scrollbar.slideStrokeStyle || 'rgb(100, 100, 100)';
-         this.editor.pen.stroke();
+         scrollbar.sy = y + (h - scrollbar.sh) / (bottom - h - 10) * top;
+         this._paintScrollBar(scrollbar);
       },
       _visualizeHorizontalScroll: function (x, y, w, h, left) {
          var right = this.getLineWidth();
@@ -354,29 +420,21 @@
             this.scrollbar.horizontal = null;
             return;
          }
-         var scrollbar = {};
-         this.scrollbar.horizontal = scrollbar;
+         var scrollbar = this.scrollbar.horizontal;
+         if (!scrollbar) {
+            scrollbar = {};
+            this.scrollbar.horizontal = scrollbar;
+         }
          scrollbar.x = x;
          scrollbar.y = y + h - 10;
+         scrollbar.sy = scrollbar.y;
          scrollbar.w = w;
          scrollbar.h = 10;
+         scrollbar.sh = scrollbar.h;
          scrollbar.sw = w * w / right;
          if (scrollbar.sw < 2) scrollbar.sw = 2;
          scrollbar.sx = x + (w - scrollbar.sw) / (right - w) * left ;
-
-         this.editor.pen.beginPath();
-         this.editor.pen.rect(scrollbar.x, scrollbar.y, scrollbar.w, scrollbar.h);
-         this.editor.pen.fillStyle = 'rgba(200, 200, 200, 0.5)';
-         this.editor.pen.fill();
-         this.editor.pen.strokeStyle = 'rgb(225, 225, 225)';
-         this.editor.pen.stroke();
-
-         this.editor.pen.beginPath();
-         this.editor.pen.rect(scrollbar.sx, scrollbar.y, scrollbar.sw, scrollbar.h);
-         this.editor.pen.fillStyle = 'rgb(150, 150, 150, 0.5)';
-         this.editor.pen.fill();
-         this.editor.pen.strokeStyle = 'rgb(100, 100, 100)';
-         this.editor.pen.stroke();
+         this._paintScrollBar(scrollbar);
       },
       visualize: function() {
          var x = this._size.x || 0;
@@ -388,7 +446,7 @@
          var viewY = this._size.viewTop || 0;
 
          var _this = this;
-         this.theme.setDefault('black');
+         this.theme.setDefault(system.defaultTextColor);
          this.editor.pen.clearRect(x-1, y, w+1, h);
          if (!this._visobj) return;
          this.editor.pen.save();
@@ -455,6 +513,40 @@
       },
       view: function () {
          return { x: this._size.viewLeft || 0, y: this._size.viewTop || 0 };
+      },
+      getObjectAt: function (x, y) {
+         var rx = x + this._size.x;
+         var ry = y + this._size.y;
+         var obj = null;
+         obj = this.scrollbar.vertical;
+         if (obj) {
+            if (math.xPointRect(rx, ry, obj.sx, obj.sy, obj.sw, obj.sh)) {
+               return {
+                  type: 'scroll-slide', name: 'v',
+                  x: obj.sx, y: obj.sy, w: obj.sw, h: obj.sh
+               };
+            } else if (math.xPointRect(rx, ry, obj.x, obj.y, obj.w, obj.h)) {
+               return {
+                  type: 'scroll-bar', name: 'v',
+                  x: obj.x, y: obj.y, w: obj.w, h: obj.h
+               };
+            }
+         }
+         obj = this.scrollbar.horizontal;
+         if (obj) {
+            if (math.xPointRect(rx, ry, obj.sx, obj.sy, obj.sw, obj.sh)) {
+               return {
+                  type: 'scroll-slide', name: 'h',
+                  x: obj.sx, y: obj.sy, w: obj.sw, h: obj.sh
+               };
+            } else if (math.xPointRect(rx, ry, obj.x, obj.y, obj.w, obj.h)) {
+               return {
+                  type: 'scroll-bar', name: 'h',
+                  x: obj.x, y: obj.y, w: obj.w, h: obj.h
+               };
+            }
+         }
+         return null;
       },
       dispose: function () {
          this.editor = null;
