@@ -1,11 +1,9 @@
 'use strict';
 //@include common.js
-//@include component/editor.js
 
 var ui = {
    loading: dom('#p_loading'),
    app: dom('#p_app'),
-   editor: new window.CodonEditor(dom('#canvas'))
 };
 
 function before_app() {
@@ -13,13 +11,6 @@ function before_app() {
 }
 
 function resize() {
-   var container = ui.editor.dom.parentNode;
-   container.style.width = '100%';
-   container.style.height = (window.innerHeight - container.offsetTop) + 'px';
-
-   ui.editor.memorize();
-   ui.editor.layout();
-   ui.editor.paint();
 }
 
 function register_events() {
@@ -40,14 +31,6 @@ function ui_loading() {
 function ui_loaded() {
    ui.loading.classList.add('hide');
    ui.app.classList.remove('hide');
-
-   var container = ui.editor.dom.parentNode;
-   container.style.width = '100%';
-   container.style.height = (window.innerHeight - container.offsetTop) + 'px';
-   ui.editor.editor_text.debug();
-   ui.editor.editor_linemark.debug(ui.editor.editor_text);
-   ui.editor.layout();
-   ui.editor.paint();
 }
 
 var env = {};
