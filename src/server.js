@@ -170,6 +170,9 @@ function createServer(router) {
    return server;
 }
 
+const i_graph = require('./graph');
+i_graph.init();
+
 const server = createServer({
    test: (_req, res, options) => {
       res.end(JSON.stringify({
@@ -179,7 +182,7 @@ const server = createServer({
    },
    auth: i_auth.webRestful,
    v1: {
-      graph: require('./graph').webRestful.v1,
+      graph: i_graph.webRestful.v1,
    },
 });
 server.listen(i_env.server.port, i_env.server.host, () => {

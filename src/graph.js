@@ -71,20 +71,20 @@ async function next() {
 const api = {
    _id: -1,
    createNode: async () => new Promise((r, e) => {
-      if (api._id <= 0) queue.push({ type: -1 });
       queue.push({ type: 2, r, e });
       next();
    }),
    deleteNode: async (id) => new Promise((r, e) => {
-      if (api._id <= 0) queue.push({ type: -1 });
       queue.push({ type: 1, id: `${id}`, r, e });
       next();
    }),
    updateNode: async (id, attr, val) => new Promise((r, e) => {
-      if (api._id <= 0) queue.push({ type: -1 });
       queue.push({ type: 0, id: `${id}`, attr, val, r, e });
       next();
    }),
+   existNode: async (id) => {
+      return await i_keyval.get(`${id}`);
+   },
    getNode: async (id, attr) => {
       try {
          const node = JSON.parse(await i_keyval.get(`${id}`));
@@ -117,6 +117,10 @@ const api = {
       await api.updateNode(`${idFrom}`, `->${idTo}`);
       await api.updateNode(`${idTo}`, `<-${idFrom}`);
    },
+   init: async () => {
+      if (api._id <= 0) queue.push({ type: -1 });
+      next();
+   }
 };
 
 api.webRestful = {
@@ -139,8 +143,8 @@ api.webRestful = {
          case 'PUT': {
             if (!nid) return i_ut.e404(res);
             const attr = opt.path[1];
-            const val = i_ut.readRequestBinary(req);
-            await api.updateNode(nid, attr || '_', val.toString());
+            const val = (await i_ut.readRequestBinary(req)).toString();
+            await api.updateNode(nid, attr || '_', val);
             i_ut.rJson(res, { id: nid });
             break;
          }
@@ -153,6 +157,51 @@ api.webRestful = {
             i_ut.e405(res);
          }
       }, // node
+      node_next: async (req, res, opt) => {
+         // TODO: check auth
+         let nid = parseInt(opt.path[0] || '-1');
+         switch (req.method) {
+         case 'GET': {
+            if (nid <= 0) return i_ut.e404(res);
+            nid ++;
+            while (true) {
+               if (nid >= api._id) {
+                  return i_ut.e404(res);
+               }
+               if (await api.existNode(nid)) {
+                  return i_ut.rJson(res, { id: nid });
+               }
+               nid ++;
+            }
+            break;
+         }
+         default:
+            i_ut.e405(res);
+         }
+      }, // node_next
+      node_prev: async (req, res, opt) => {
+         // TODO: check auth
+         let nid = parseInt(opt.path[0] || '-1');
+         switch (req.method) {
+         case 'GET': {
+            if (nid <= 0) return i_ut.e404(res);
+            if (nid >= api._id) nid = api._id;
+            nid --;
+            while (true) {
+               if (nid <= 0) {
+                  return i_ut.e404(res);
+               }
+               if (await api.existNode(nid)) {
+                  return i_ut.rJson(res, { id: nid });
+               }
+               nid --;
+            }
+            break;
+         }
+         default:
+            i_ut.e405(res);
+         }
+      }, // node_prev
       link: async (req, res, opt) => {
          // TODO: check auth
          const nid = opt.path[0];

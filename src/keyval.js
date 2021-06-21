@@ -34,6 +34,10 @@ const api = {
       const targetDir = i_path.join(keyvalDir, ...splitHash(hashKey(key)), escape(key));
       return await i_ut.fileOp.read(i_path.join(targetDir, '_'));
    },
+   exist: async (key) => {
+      const targetDir = i_path.join(keyvalDir, ...splitHash(hashKey(key)), escape(key));
+      return await i_ut.fileOp.exist(i_path.join(targetDir, '_'));
+   },
 };
 
 if (!keyvalDir) {
