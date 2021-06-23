@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+   <title>Codon - Explore</title>
+   <meta charset='utf-8' />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+   <link rel="stylesheet" href="./css/common.css" />
+</head>
+<body>
+   <header class="header header-5">
+      <div class="branding">
+         <img class="header-icon" src="./img/logo.png" />&nbsp;
+         <span class="title">Codon</span>
+      </div>
+   </header>
+   <div>
+      <div class="subnav">
+         <ul class="nav">
+            <li class="nav-item"><a id="nav_mline" class="nav-link active">Explore</a></li>
+         </ul>
+      </div>
+      <div class="content-container">
+         <div>
+            <div class="item item-yellow">
+               <a class="item-btn" id="btnPrev">Prev</a>
+               <a class="item-btn" id="btnNext">Next</a>
+               <a class="item-btn item-green" id="btnNew">New</a>
+               <a class="item-btn item-red" id="btnDel">Del</a>
+            </div>
+            <div id="pnlKeyval"></div>
+            <div class="item item-yellow" id="pnlPutAttr" style="display:none;">
+               <div class="full-width">
+                  <input class="item-input" id="txtKey" placeholder="Key" />
+               </div>
+               <div class="full-width">
+                  <textarea class="item-input" id="txtVal" placeholder="Value"></textarea>
+               </div>
+               <div>
+                  <a class="item-btn" id="btnOK">OK</a>
+                  <a class="item-btn" id="btnNO">Cancel</a>
+               </div>
+            </div>
+            <div class="item item-yellow">
+               <a class="item-btn" id="btnAddAttr">+</a>
+            </div>
+         </div>
+      </div></div>
+      <footer>
+         <div class="item item-red"></div>
+      </footer>
+   </div>
+   <div class="mask" style="display:none;"></div>
+   <script type="text/javascript" src="./js/common.js"></script>
+   <script type="text/javascript" src="./js/explore.js"></script>
+   <script type="text/javascript">login_and_start('/login.html#/explore.html');</script>
+</body>
+</html>
+

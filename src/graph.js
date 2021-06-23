@@ -40,18 +40,23 @@ async function next() {
          await i_keyval.put(task.id, JSON.stringify(node));
          task.r();
          break;
-      case 1:
+      case 1: {
          // TODO: del link (foreach node in <-id and ->id)
          await i_keyval.del(task.id);
+         const id = parseInt(task.id);
+         if (api._id === id + 1) api._id --;
+         await i_keyval.put('_id', `${api._id}`);
          task.r();
          break;
-      case 2:
+      }
+      case 2: {
          const id = `${api._id}`;
          api._id ++;
          await i_keyval.put('_id', `${api._id}`);
          await i_keyval.put(id, '{}');
          task.r(`${id}`);
          break;
+      }
       case -1:
          if (api._id > 0) break;
          try {
@@ -149,7 +154,7 @@ api.webRestful = {
             if (!nid) return i_ut.e404(res);
             const attr = opt.path[1];
             const val = (await i_ut.readRequestBinary(req)).toString();
-            await api.updateNode(nid, attr || '_', val);
+            await api.updateNode(nid, attr || '_', val || undefined);
             i_ut.rJson(res, Object.assign(
                i_auth.initializeJsonOutput(opt),
                { id: nid }
@@ -158,7 +163,11 @@ api.webRestful = {
          }
          case 'DELETE':
             if (!nid) return i_ut.e404(res);
-            await api.deleteNode(json.id);
+            try {
+               await api.deleteNode(nid);
+            } catch (e) {
+               return i_ut.e404(res);
+            }
             i_ut.rJson(res, Object.assign(
                i_auth.initializeJsonOutput(opt),
                { id: nid }
