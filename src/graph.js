@@ -1,4 +1,5 @@
 const i_keyval = require('./keyval');
+const i_auth = require('./auth');
 const i_ut = require('./util');
 
 const env = {
@@ -125,51 +126,64 @@ const api = {
 
 api.webRestful = {
    v1: {
-      node: async (req, res, opt) => {
+      node: i_auth.requireHeaderLogin(async (req, res, opt) => {
          // TODO: check auth
          const nid = opt.path[0];
          switch (req.method) {
          case 'GET': {
             if (!nid) return i_ut.e404(res);
             const attr = opt.path[1];
-            i_ut.rJson(res, await api.getNode(nid, attr));
+            i_ut.rJson(res, Object.assign(
+               i_auth.initializeJsonOutput(opt),
+               await api.getNode(nid, attr)
+            ));
             break;
          }
          case 'POST':
-            i_ut.rJson(res, {
-               id: await api.createNode(),
-            });
+            i_ut.rJson(res, Object.assign(
+               i_auth.initializeJsonOutput(opt),
+               { id: await api.createNode(), }
+            ));
             break;
          case 'PUT': {
             if (!nid) return i_ut.e404(res);
             const attr = opt.path[1];
             const val = (await i_ut.readRequestBinary(req)).toString();
             await api.updateNode(nid, attr || '_', val);
-            i_ut.rJson(res, { id: nid });
+            i_ut.rJson(res, Object.assign(
+               i_auth.initializeJsonOutput(opt),
+               { id: nid }
+            ));
             break;
          }
          case 'DELETE':
             if (!nid) return i_ut.e404(res);
             await api.deleteNode(json.id);
-            i_ut.rJson(res, { id: nid });
+            i_ut.rJson(res, Object.assign(
+               i_auth.initializeJsonOutput(opt),
+               { id: nid }
+            ));
             break;
          default:
             i_ut.e405(res);
          }
-      }, // node
-      node_next: async (req, res, opt) => {
+      }), // node
+      node_next: i_auth.requireHeaderLogin(async (req, res, opt) => {
          // TODO: check auth
          let nid = parseInt(opt.path[0] || '-1');
          switch (req.method) {
          case 'GET': {
-            if (nid <= 0) return i_ut.e404(res);
+            if (nid < 0) nid = 0;
             nid ++;
             while (true) {
                if (nid >= api._id) {
                   return i_ut.e404(res);
                }
                if (await api.existNode(nid)) {
-                  return i_ut.rJson(res, { id: nid });
+                  return i_ut.rJson(res, Object.assign(
+                     i_auth.initializeJsonOutput(opt),
+                     { id: nid }
+                  ));
                }
                nid ++;
             }
@@ -178,8 +192,8 @@ api.webRestful = {
          default:
             i_ut.e405(res);
          }
-      }, // node_next
-      node_prev: async (req, res, opt) => {
+      }), // node_next
+      node_prev: i_auth.requireHeaderLogin(async (req, res, opt) => {
          // TODO: check auth
          let nid = parseInt(opt.path[0] || '-1');
          switch (req.method) {
@@ -192,7 +206,10 @@ api.webRestful = {
                   return i_ut.e404(res);
                }
                if (await api.existNode(nid)) {
-                  return i_ut.rJson(res, { id: nid });
+                  return i_ut.rJson(res, Object.assign(
+                     i_auth.initializeJsonOutput(opt),
+                     { id: nid }
+                  ));
                }
                nid --;
             }
@@ -201,20 +218,26 @@ api.webRestful = {
          default:
             i_ut.e405(res);
          }
-      }, // node_prev
-      link: async (req, res, opt) => {
+      }), // node_prev
+      link: i_auth.requireHeaderLogin(async (req, res, opt) => {
          // TODO: check auth
          const nid = opt.path[0];
          if (!nid) return i_ut.e404(res);
          switch (req.method) {
          case 'GET':
-            i_ut.rJson(res, await api.getLink(nid));
+            i_ut.rJson(res, Object.assign(
+               i_auth.initializeJsonOutput(opt),
+               await api.getLink(nid)
+            ));
             break;
          case 'POST': {
             const nid_to = opt.path[1];
             if (!nid_to) return i_ut.e404(res);
             await api.linkToNode(nid, nid_to);
-            i_ut.rJson(res, { id: nid });
+            i_ut.rJson(res, Object.assign(
+               i_auth.initializeJsonOutput(opt),
+               { id: nid }
+            ));
             break;
          }
          case 'DELETE': {
@@ -227,17 +250,23 @@ api.webRestful = {
                for (let i = 0, n = edges.out.length; i < n; i++) {
                   await api.unlinkToNode(nid, edges.out[i]);
                }
-               i_ut.rJson(res, { id: nid });
+               i_ut.rJson(res, Object.assign(
+                  i_auth.initializeJsonOutput(opt),
+                  { id: nid }
+               ));
                break;
             }
             await api.unlinkToNode(nid, nid_to);
-            i_ut.rJson(res, { id: nid });
+            i_ut.rJson(res, Object.assign(
+               i_auth.initializeJsonOutput(opt),
+               { id: nid }
+            ));
             break;
          }
          default:
             i_ut.e405(res);
          }
-      }, // link
+      }), // link
    } // v1
 };
 

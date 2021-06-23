@@ -186,5 +186,5 @@ const server = createServer({
    },
 });
 server.listen(i_env.server.port, i_env.server.host, () => {
-   console.log(`Flame server is listening at ${i_env.server.host}:${i_env.server.port}`);
+   console.log(`Codon server is listening at ${i_env.server.host}:${i_env.server.port}`);
 });

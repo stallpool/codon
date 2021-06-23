@@ -118,12 +118,27 @@ const api = {
          if (fn) fn(req, res, opt);
       };
    },
+   requireHeaderLogin: (fn) => {
+      return async (req, res, opt) => {
+         const h = req.headers['auth-token'];
+         if (!h) return i_util.e401(res);
+         const parts = h.split('/');
+         // e.g. user/token
+         const obj = { user: parts[0], uuid: parts[1] };
+         if (!obj.user || !obj.uuid) return i_util.e401(res);
+         const updatedSessionId = await api.checkUserSession(obj.user, obj.uuid);
+         if (!updatedSessionId) return i_util.e401(res);
+         opt.json = obj;
+         opt.nextSessionId = updatedSessionId;
+         if (fn) fn(req, res, opt);
+      };
+   },
    initializeJsonOutput: (opt) => {
       // determine if need to update access token (uuid) at client side
       const obj = {};
       if (!opt || !opt.json) return obj;
       if (opt.nextSessionId === opt.json.uuid) return obj;
-      obj.sessionId = opt.nextSessionId;
+      obj._sessionId = opt.nextSessionId;
       return obj;
    }, // initializeJsonOutput
 };
