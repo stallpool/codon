@@ -66,7 +66,10 @@ function initEvent() {
          var json = update_uuid(res);
          ui.mask.style.display = 'none';
          reloadPageToPrevNode(env.nid, function () {
-            reloadPageToNextNode(env.nid)
+            reloadPageToNextNode(env.nid, function () {
+               ui.mask.style.display = 'none';
+               location.hash = '';
+            });
          });
       }, function (e) {
          console.error(e);
@@ -148,8 +151,10 @@ function createAttrItem(key, val, odd) {
 
 
 function reloadPageToFirstNode() {
-   reloadPageToNextNode(0);
-   // TODO: no first node
+   reloadPageToNextNode(0, function () {
+      alert('No node. Use \'New\' to add one.');
+      ui.mask.style.display = 'none';
+   });
 }
 
 function reloadPageToNextNode(id, failFn) {

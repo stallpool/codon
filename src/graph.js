@@ -138,9 +138,11 @@ api.webRestful = {
          case 'GET': {
             if (!nid) return i_ut.e404(res);
             const attr = opt.path[1];
+            const node = await api.getNode(nid, attr);
+            if (!node) return i_ut.e404(res);
             i_ut.rJson(res, Object.assign(
                i_auth.initializeJsonOutput(opt),
-               await api.getNode(nid, attr)
+               node
             ));
             break;
          }
@@ -182,7 +184,7 @@ api.webRestful = {
          let nid = parseInt(opt.path[0] || '-1');
          switch (req.method) {
          case 'GET': {
-            if (nid < 0) nid = 0;
+            if (nid < 0 || !nid) nid = 0;
             nid ++;
             while (true) {
                if (nid >= api._id) {
@@ -207,7 +209,7 @@ api.webRestful = {
          let nid = parseInt(opt.path[0] || '-1');
          switch (req.method) {
          case 'GET': {
-            if (nid <= 0) return i_ut.e404(res);
+            if (nid < 0 || !nid) return i_ut.e404(res);
             if (nid >= api._id) nid = api._id;
             nid --;
             while (true) {
