@@ -5,6 +5,14 @@
    <meta charset='utf-8' />
    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
    <link rel="stylesheet" href="./css/common.css" />
+   <style>
+   .link-id {
+      margin-left: 5px;
+      text-decoration: none;
+      min-width: 100px;
+      display: inline-block;
+   }
+   </style>
 </head>
 <body>
    <header class="header header-5">
@@ -40,8 +48,21 @@
                   <a class="item-btn" id="btnNO">Cancel</a>
                </div>
             </div>
+            <div id="pnlLink"></div>
+            <div class="item item-yellow" id="pnlPutLink" style="display:none;">
+               <div>
+                  <a class="item-btn item-green" id="btnLinkFrom">&lt;-</a>
+                  <a class="item-btn" id="btnLinkTo">-&gt;</a>&nbsp;
+                  <input class="item-input" id="txtLinkNode" placeholder="Node ID" />
+               </div>
+               <div>
+                  <a class="item-btn" id="btnLinkOK">OK</a>
+                  <a class="item-btn" id="btnLinkNO">Cancel</a>
+               </div>
+            </div>
             <div class="item item-yellow">
-               <a class="item-btn" id="btnAddAttr">+</a>
+               <a class="item-btn" id="btnAddAttr">+Attr</a>
+               <a class="item-btn" id="btnAddLink">+Link</a>
             </div>
          </div>
       </div></div>

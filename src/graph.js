@@ -89,7 +89,12 @@ const api = {
       next();
    }),
    existNode: async (id) => {
-      return await i_keyval.get(`${id}`);
+      try {
+         const node = await i_keyval.get(`${id}`);
+         return !!node;
+      } catch(e) {
+         return false;
+      }
    },
    getNode: async (id, attr) => {
       try {
@@ -116,12 +121,19 @@ const api = {
       return r;
    },
    linkToNode: async (idFrom, idTo) => {
+      const n1ex = await api.existNode(idFrom);
+      const n2ex = await api.existNode(idTo);
+      if (!n1ex || !n2ex) return false;
       await api.updateNode(`${idFrom}`, `->${idTo}`, '1');
       await api.updateNode(`${idTo}`, `<-${idFrom}`, '1');
+      return true;
    },
    unlinkToNode: async (idFrom, idTo) => {
-      await api.updateNode(`${idFrom}`, `->${idTo}`);
-      await api.updateNode(`${idTo}`, `<-${idFrom}`);
+      const n1ex = await api.existNode(idFrom);
+      const n2ex = await api.existNode(idTo);
+      if (n1ex) await api.updateNode(`${idFrom}`, `->${idTo}`);
+      if (n2ex) await api.updateNode(`${idTo}`, `<-${idFrom}`);
+      return n1ex || n2ex;
    },
    init: async () => {
       if (api._id <= 0) queue.push({ type: -1 });
@@ -244,16 +256,21 @@ api.webRestful = {
          case 'POST': {
             const nid_to = opt.path[1];
             if (!nid_to) return i_ut.e404(res);
-            await api.linkToNode(nid, nid_to);
+            if (!(await api.linkToNode(nid, nid_to))) {
+               return i_ut.e400(res);
+            }
             i_ut.rJson(res, Object.assign(
                i_auth.initializeJsonOutput(opt),
-               { id: nid }
+               { id: nid, to: nid_to }
             ));
             break;
          }
          case 'DELETE': {
             const nid_to = opt.path[1];
             if (!nid_to) {
+               if (!(await api.existNode(nid))) {
+                  return i_ut.e404(res);
+               }
                const edges = await api.getLink(nid);
                for (let i = 0, n = edges.in.length; i < n; i++) {
                   await api.unlinkToNode(edges.in[i], nid);
@@ -267,10 +284,12 @@ api.webRestful = {
                ));
                break;
             }
-            await api.unlinkToNode(nid, nid_to);
+            if (!(await api.unlinkToNode(nid, nid_to))) {
+               return i_ut.e400(res);
+            }
             i_ut.rJson(res, Object.assign(
                i_auth.initializeJsonOutput(opt),
-               { id: nid }
+               { id: nid, to: nid_to }
             ));
             break;
          }

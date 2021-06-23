@@ -9,25 +9,35 @@ var ui = {
       next: dom('#btnNext'),
       new: dom('#btnNew'),
       del: dom('#btnDel'),
-      keyval: {
+      attr: {
          ok: dom('#btnOK'),
          cancel: dom('#btnNO'),
-         shide: dom('#btnAddAttr')
+         show: dom('#btnAddAttr')
+      },
+      link: {
+         from: dom('#btnLinkFrom'),
+         to: dom('#btnLinkTo'),
+         ok: dom('#btnLinkOK'),
+         cancel: dom('#btnLinkNO'),
+         show: dom('#btnAddLink')
       }
    },
    pnl: {
-      keyval: dom('#pnlKeyval'),
-      attr: dom('#pnlPutAttr')
+      attr: dom('#pnlKeyval'),
+      attr_edit: dom('#pnlPutAttr'),
+      link: dom('#pnlLink'),
+      link_edit: dom('#pnlPutLink')
    },
    txt: {
       val: dom('#txtVal'),
-      key: dom('#txtKey')
+      key: dom('#txtKey'),
+      nid: dom('#txtLinkNode')
    },
    mask: dom('.mask')
 };
 
 function onHashChange() {
-   ui.pnl.attr.style.display = 'none';
+   ui.pnl.attr_edit.style.display = 'none';
    loadNode();
 }
 
@@ -60,16 +70,25 @@ function initEvent() {
       ui.mask.style.display = 'block';
       ajax({
          headers: get_auth_header(),
-         url: '/v1/graph/node/' + env.nid,
+         url: '/v1/graph/link/' + env.nid,
          method: 'DELETE'
       }, function (res) {
-         var json = update_uuid(res);
-         ui.mask.style.display = 'none';
-         reloadPageToPrevNode(env.nid, function () {
-            reloadPageToNextNode(env.nid, function () {
-               ui.mask.style.display = 'none';
-               location.hash = '';
+         update_uuid(res);
+         ajax({
+            headers: get_auth_header(),
+            url: '/v1/graph/node/' + env.nid,
+            method: 'DELETE'
+         }, function (res) {
+            var json = update_uuid(res);
+            ui.mask.style.display = 'none';
+            reloadPageToPrevNode(env.nid, function () {
+               reloadPageToNextNode(env.nid, function () {
+                  ui.mask.style.display = 'none';
+                  location.hash = '';
+               });
             });
+         }, function (e) {
+            console.error(e);
          });
       }, function (e) {
          console.error(e);
@@ -87,12 +106,13 @@ function initEvent() {
          ui.mask.style.display = 'none';
       });
    });
-   ui.btn.keyval.ok.addEventListener('click', function (evt) {
+
+   ui.btn.attr.ok.addEventListener('click', function (evt) {
       var key = ui.txt.key.value;
       var val = ui.txt.val.value;
       if (!key) return;
       ui.mask.style.display = 'block';
-      ui.pnl.attr.style.display = 'none';
+      ui.pnl.attr_edit.style.display = 'none';
       ajax({
          headers: get_auth_header(),
          url: '/v1/graph/node/' + env.nid + '/' + encodeURIComponent(key),
@@ -105,30 +125,96 @@ function initEvent() {
          updateAttrList(key, val);
          ui.mask.style.display = 'none';
       }, function (e) {
-         ui.pnl.attr.style.display = 'block';
+         ui.pnl.attr_edit.style.display = 'block';
          ui.txt.key.focus();
          console.error(e);
       });
    });
-   ui.btn.keyval.cancel.addEventListener('click', function (evt) {
+   ui.btn.attr.cancel.addEventListener('click', function (evt) {
       ui.txt.key.value = '';
       ui.txt.val.value = '';
-      ui.pnl.attr.style.display = 'none';
+      ui.pnl.attr_edit.style.display = 'none';
    });
-   ui.btn.keyval.shide.addEventListener('click', function (evt) {
+   ui.btn.attr.show.addEventListener('click', function (evt) {
       ui.txt.key.value = '';
       ui.txt.val.value = '';
-      ui.pnl.attr.style.display = 'block';
+      ui.pnl.attr_edit.style.display = 'block';
       ui.txt.key.focus();
    });
-   ui.pnl.keyval.addEventListener('click', function (evt) {
+
+   ui.btn.link.from.addEventListener('click', function (evt) {
+      ui.btn.link.from.classList.add('item-green');
+      ui.btn.link.to.classList.remove('item-green');
+      ui.txt.nid.focus();
+   });
+   ui.btn.link.to.addEventListener('click', function (evt) {
+      ui.btn.link.to.classList.add('item-green');
+      ui.btn.link.from.classList.remove('item-green');
+      ui.txt.nid.focus();
+   });
+   ui.btn.link.ok.addEventListener('click', function (evt) {
+      var nid = ui.txt.nid.value;
+      if (!nid) return;
+      ui.mask.style.display = 'block';
+      var dito = ui.btn.link.to.classList.contains('item-green');
+      var n1 = dito?env.nid:nid;
+      var n2 = dito?nid:env.nid;
+      ajax({
+         headers: get_auth_header(),
+         url: '/v1/graph/link/' + n1 + '/' + n2,
+         method: 'POST',
+      }, function () {
+         ui.txt.nid.value = '';
+         ui.pnl.link_edit.style.display = 'none';
+         updateLinkList(nid, dito);
+         ui.mask.style.display = 'none';
+      }, function (e) {
+         ui.mask.style.display = 'none';
+      });
+   });
+   ui.btn.link.cancel.addEventListener('click', function (evt) {
+      ui.txt.nid.value = '';
+      ui.pnl.link_edit.style.display = 'none';
+   });
+   ui.btn.link.show.addEventListener('click', function (evt) {
+      ui.txt.nid.value = '';
+      ui.btn.link.from.classList.add('item-green');
+      ui.btn.link.to.classList.remove('item-green');
+      ui.pnl.link_edit.style.display = 'block';
+      ui.txt.nid.focus();
+   });
+
+   ui.pnl.attr.addEventListener('click', function (evt) {
       if (evt.target.classList.contains('item-btn-edit')) {
          var key = evt.target.textContent;
          var val = evt.target.parentNode.children[1].textContent;
          ui.txt.key.value = key;
          ui.txt.val.value = val;
-         ui.pnl.attr.style.display = 'block';
+         ui.pnl.attr_edit.style.display = 'block';
          ui.txt.key.focus();
+      }
+   });
+
+   ui.pnl.link.addEventListener('click', function (evt) {
+      if (evt.target.classList.contains('item-btn-del-link')) {
+         var dito = evt.target.textContent.trim() === 'X ->';
+         var nid = evt.target.parentNode.children[1].textContent;
+         if (!nid) return;
+         ui.mask.style.display = 'block';
+         var n1 = dito?env.nid:nid;
+         var n2 = dito?nid:env.nid;
+         ajax({
+            headers: get_auth_header(),
+            url: '/v1/graph/link/' + n1 + '/' + n2,
+            method: 'DELETE'
+         }, function (res) {
+            var item = evt.target.parentNode;
+            item.parentNode.remove(item);
+            ui.mask.style.display = 'none';
+         }, function (e) {
+            console.error(e);
+            ui.mask.style.display = 'none';
+         });
       }
    });
 }
@@ -146,6 +232,25 @@ function createAttrItem(key, val, odd) {
    var span = document.createElement('pre');
    span.appendChild(document.createTextNode(val));
    div.appendChild(span);
+   return div;
+}
+
+function createLinkItem(nid, dito, odd) {
+   var div = document.createElement('div');
+   div.classList.add('item');
+   if (!odd) div.classList.add('item-grey');
+   var a = document.createElement('a');
+   a.appendChild(document.createTextNode(dito?'X ->':'X <-'));
+   a.classList.add('item-btn');
+   a.classList.add('item-red');
+   a.classList.add('item-btn-del-link');
+   div.appendChild(a);
+
+   var a = document.createElement('a');
+   a.classList.add('link-id');
+   a.appendChild(document.createTextNode(nid));
+   a.href = '#/' + nid;
+   div.appendChild(a);
    return div;
 }
 
@@ -188,6 +293,11 @@ function reloadPageToPrevNode(id, failFn) {
 }
 
 function loadNode() {
+   env.node = null;
+   env.nid = -1;
+   env.ein = [];
+   env.eout = [];
+
    ui.mask.style.display = 'block';
    var parts = location.hash.split('/');
    var nid = parseInt(parts[1], 10);
@@ -211,7 +321,7 @@ function loadNode() {
 }
 
 function buildAttrList() {
-   empty_elem(ui.pnl.keyval);
+   empty_elem(ui.pnl.attr);
    if (!env.node) return;
    var keys = Object.keys(env.node);
    var ein = [], eout = [];
@@ -222,15 +332,30 @@ function buildAttrList() {
          ein.push(key.substring(2));
       } else {
          var div = createAttrItem(
-            key, env.node[key], ui.pnl.keyval.children.length % 2
+            key, env.node[key], ui.pnl.attr.children.length % 2
          );
-         ui.pnl.keyval.appendChild(div);
+         ui.pnl.attr.appendChild(div);
       }
+   });
+   env.ein = ein;
+   env.eout = eout;
+   buildLinkList();
+}
+
+function buildLinkList() {
+   empty_elem(ui.pnl.link);
+   env.ein.forEach(function (nid_from) {
+      var div = createLinkItem(nid_from, false, ui.pnl.link.children.length % 2);
+      ui.pnl.link.appendChild(div);
+   });
+   env.eout.forEach(function (nid_to) {
+      var div = createLinkItem(nid_to, true, ui.pnl.link.children.length % 2);
+      ui.pnl.link.appendChild(div);
    });
 }
 
 function updateAttrList(key, val) {
-   var ch = ui.pnl.keyval.children;
+   var ch = ui.pnl.attr.children;
    var ok = false;
    for (let i = 0, n = ch.length; i < n; i++) {
       var key0 = ch[i].children[0].textContent;
@@ -239,17 +364,22 @@ function updateAttrList(key, val) {
          empty_elem(ch[i].children[1]);
          ch[i].children[1].appendChild(document.createTextNode(val));
       } else {
-         ui.pnl.keyval.removeChild(ch[i]);
+         ui.pnl.attr.removeChild(ch[i]);
       }
       ok = true;
       break;
    }
    if (!ok) {
       var div = createAttrItem(
-         key, val, ui.pnl.keyval.children.length % 2
+         key, val, ui.pnl.attr.children.length % 2
       );
-      ui.pnl.keyval.appendChild(div);
+      ui.pnl.attr.appendChild(div);
    }
+}
+
+function updateLinkList(nid, dito) {
+   var div = createLinkItem(nid, dito, ui.pnl.link.children.length % 2);
+   ui.pnl.link.appendChild(div);
 }
 
 init();
